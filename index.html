@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Searcher API</title>
+    <title>Music Searcher с консолью</title>
+    
+    <!-- ✅ КОНСОЛЬ ERUDA ДЛЯ ТЕЛЕФОНА (иконка в правом верхнем углу) -->
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+    <script>eruda.init();</script>
+    
     <style>
         body { background: #0b0b0b; color: #eee; font-family: sans-serif; margin: 0; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; }
@@ -22,9 +27,9 @@
 <body>
     <div class="container">
         <div style="position: sticky; top: 0; background: #0b0b0b; padding-bottom: 10px; z-index: 10;">
-            <input type="text" id="q" placeholder="Macan, Miyagi, Drake" onkeypress="if(event.key==='Enter') search()">
+            <input type="text" id="q" placeholder="Macan, Miyagi, Drake, radiohead" onkeypress="if(event.key==='Enter') search()">
             <button onclick="search()">🔍 Найти</button>
-            <div id="status"></div>
+            <div id="status">🖥️ Консоль в правом верхнем углу!</div>
         </div>
         <div id="res"></div>
     </div>
@@ -39,39 +44,48 @@
             
             status.innerText = 'Ищу через API... 🔍';
             res.innerHTML = '';
+            
+            // ✅ Логи в консоль Eruda
+            console.log('🔍 Поиск:', query);
 
             try {
-                // Last.fm API с полной проверкой структуры ответа
                 const url = `https://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(query)}&api_key=4a8a6c71903e4e9a9b0f9c8a2d3e4f5a&format=json&limit=10`;
+                
+                console.log('🌐 API URL:', url);
                 
                 const response = await fetch(url);
                 const data = await response.json();
 
-                // Полная отладка в консоль
-                console.log('API Response:', data);
+                // ✅ ПОЛНЫЙ API ОТВЕТ В КОНСОЛИ
+                console.log('📦 Полный API ответ:', data);
+                console.log('🔍 data.results:', data.results);
 
-                // Безопасная проверка структуры
-                if (!data || !data.results) {
-                    throw new Error('API вернул пустой результат');
-                }
-
-                const tracks = data.results.trackmatches?.track || [];
-                status.innerText = `Найдено треков: ${tracks.length}`;
-
-                if (tracks.length === 0) {
-                    status.innerText = 'Треки не найдены. Попробуй: radiohead, metallica';
+                if (!data.results) {
+                    status.innerText = 'API пустой. Тест: radiohead';
+                    console.error('❌ Нет data.results');
                     return;
                 }
 
-                // Отображаем результаты
-                tracks.slice(0, 10).forEach(track => {
+                const tracks = data.results.trackmatches?.track || [];
+                console.log('🎵 Треки найдены:', tracks.length, tracks);
+                
+                status.innerText = `Найдено: ${tracks.length} треков`;
+
+                if (tracks.length === 0) {
+                    status.innerText = 'Треки не найдены 😔';
+                    return;
+                }
+
+                tracks.slice(0, 10).forEach((track, i) => {
+                    console.log(`#${i+1}:`, track.name, '-', track.artist);
+                    
                     const div = document.createElement('div');
                     div.className = 'track';
                     div.innerHTML = `
                         <img src="https://via.placeholder.com/50/1db954/000?text=🎵" alt="Обложка">
                         <div class="info">
-                            <span class="title">${track.name || 'Неизвестный трек'}</span>
-                            <span class="artist">${track.artist || 'Неизвестный исполнитель'}</span>
+                            <span class="title">${track.name || 'Неизвестный'}</span>
+                            <span class="artist">${track.artist || 'Неизвестный'}</span>
                         </div>
                         <audio controls src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"></audio>
                     `;
@@ -79,8 +93,8 @@
                 });
 
             } catch (error) {
-                console.error('API Error:', error);
-                status.innerHTML = '<span style="color:#ff6b6b">Ошибка API. F12 → Console для деталей.</span>';
+                console.error('💥 Ошибка:', error);
+                status.innerHTML = '<span style="color:#ff6b6b">Ошибка сети</span>';
             }
         }
     </script>

@@ -40,42 +40,48 @@
             status.innerText = 'Ищу... 🔍';
             res.innerHTML = '';
 
-            // Правильный URL iTunes API через CORS-прокси для GitHub Pages
-            const encodedQuery = encodeURIComponent(query);
-            const url = `https://corsproxy.io/?${encodedURIComponent(`https://itunes.apple.com/search?term=${encodedQuery}&entity=song&limit=20&country=ru`)}`;
+            // Deezer API — работает напрямую без CORS проблем!
+            const url = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=10`;
 
             try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error('API недоступен');
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 8000); // 8 сек таймаут
+
+                const response = await fetch(url, { signal: controller.signal });
+                clearTimeout(timeout);
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
 
-                status.innerText = '';
-                
-                if (data.resultCount === 0) {
+                status.innerText = `Найдено: ${data.total || 0}`;
+
+                if (!data.data || data.data.length === 0) {
                     status.innerText = 'Ничего не найдено ⛔';
                     return;
                 }
 
-                data.results.forEach(t => {
-                    if (t.previewUrl) {
-                        const div = document.createElement('div');
-                        div.className = 'track';
-                        div.innerHTML = `
-                            <div class="track-info">
-                                <img src="${t.artworkUrl100}" alt="Обложка">
-                                <div class="names">
-                                    <span class="title">${t.trackName}</span>
-                                    <span class="artist">${t.artistName}</span>
-                                </div>
+                data.data.slice(0, 10).forEach(track => {
+                    const div = document.createElement('div');
+                    div.className = 'track';
+                    div.innerHTML = `
+                        <div class="track-info">
+                            <img src="${track.album.cover_small}" alt="Обложка" loading="lazy">
+                            <div class="names">
+                                <span class="title">${track.title}</span>
+                                <span class="artist">${track.artist.name}</span>
                             </div>
-                            <audio controls src="${t.previewUrl}"></audio>
-                        `;
-                        res.appendChild(div);
-                    }
+                        </div>
+                        <audio controls src="${track.preview}" preload="none"></audio>
+                    `;
+                    res.appendChild(div);
                 });
+
             } catch (error) {
-                console.error(error);
-                status.innerHTML = '<span style="color:#ff6b6b">Ошибка сети или API. Попробуйте VPN или другой запрос.</span>';
+                if (error.name === 'AbortError') {
+                    status.innerHTML = '<span style="color:#ff6b6b">Таймаут. Медленный интернет?</span>';
+                } else {
+                    status.innerHTML = '<span style="color:#ff6b6b">Ошибка: ' + error.message + '</span>';
+                }
             }
         }
     </script>

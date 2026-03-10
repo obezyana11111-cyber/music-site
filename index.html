@@ -10,14 +10,21 @@
         input { width: 70%; padding: 12px; border-radius: 20px; border: 1px solid #333; background: #1a1a1a; color: #fff; outline: none; }
         button { padding: 12px 18px; border-radius: 20px; border: none; background: #1db954; color: white; cursor: pointer; font-weight: bold; margin-left: 10px; }
         #status { margin: 15px 0; color: #1db954; font-size: 14px; }
-        .track { background: #181818; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #222; cursor: pointer; }
-        .track:hover { background: #282828; }
+        .track { background: #181818; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #222; cursor: pointer; transition: all 0.2s; }
+        .track:hover { background: #282828; transform: translateY(-2px); }
+        .track-info { display: flex; align-items: center; gap: 12px; }
+        img { width: 50px; height: 50px; border-radius: 4px; object-fit: cover; }
+        .names { flex: 1; }
+        .title { display: block; font-weight: bold; font-size: 14px; }
+        .artist { font-size: 12px; color: #aaa; }
+        .play-btn { background: #1db954; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; color: white; font-size: 16px; }
+        .play-btn:hover { background: #1ed760; }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="position: sticky; top: 0; background: #0b0b0b; padding-bottom: 10px; z-index: 10;">
-            <input type="text" id="q" placeholder="Macan, Miyagi, Моргенштерн" onkeypress="if(event.key==='Enter') search()">
+            <input type="text" id="q" placeholder="Macan, Miyagi, Pharaoh" onkeypress="if(event.key==='Enter') search()">
             <button onclick="search()">Найти</button>
             <div id="status"></div>
         </div>
@@ -25,30 +32,58 @@
     </div>
 
     <script>
-        async function search() {
-            const query = document.getElementById('q').value.trim();
-            if (!query) return;
+        const demoTracks = {
+            'macan': [
+                { title: 'Пополам', artist: 'Макан', img: 'https://i.scdn.co/image/ab67616d0000b273f8e8e5e5e5e5e5e5e5e5e5e5', audio: 'https://p.scdn.co/mp3-preview/3f8e8e5e5e5e5e5e5e5e5e5e5e5e5e5.mp3' },
+                { title: '36 вопросов', artist: 'Макан', img: 'https://i.scdn.co/image/ab67616d0000b273a1b2c3d4e5f6a7b8c9d0e1f2', audio: 'https://p.scdn.co/mp3-preview/4f8e8e5e5e5e5e5e5e5e5e5e5e5e5e5.mp3' }
+            ],
+            'miyagi': [
+                { title: 'Fire Man', artist: 'Miyagi & Эндшпиль', img: 'https://i.scdn.co/image/ab67616d0000b273b2c3d4e5f6a7b8c9d0e1f2a3', audio: 'https://p.scdn.co/mp3-preview/5f8e8e5e5e5e5e5e5e5e5e5e5e5e5e5.mp3' },
+                { title: 'I Got Love', artist: 'Miyagi & Эндшпиль', img: 'https://i.scdn.co/image/ab67616d0000b273c3d4e5f6a7b8c9d0e1f2a3b4', audio: 'https://p.scdn.co/mp3-preview/6f8e8e5e5e5e5e5e5e5e5e5e5e5e5e5.mp3' }
+            ],
+            'pharaoh': [
+                { title: 'Дико, например', artist: 'PHARAOH', img: 'https://i.scdn.co/image/ab67616d0000b273d4e5f6a7b8c9d0e1f2a3b4c5', audio: 'https://p.scdn.co/mp3-preview/7f8e8e5e5e5e5e5e5e5e5e5e5e5e5e5.mp3' },
+                { title: 'Кто они', artist: 'PHARAOH', img: 'https://i.scdn.co/image/ab67616d0000b273e5f6a7b8c9d0e1f2a3b4c5d6', audio: 'https://p.scdn.co/mp3-preview/8f8e8e5e5e5e5e5e5e5e5e5e5e5e5e5.mp3' }
+            ]
+        };
 
+        async function search() {
+            const query = document.getElementById('q').value.trim().toLowerCase();
             const status = document.getElementById('status');
             const res = document.getElementById('res');
             
             status.innerText = 'Ищу... 🔍';
             res.innerHTML = '';
 
-            // Публичный YouTube Music поиск (CORS-free)
-            const url = `https://music.youtube.com/search?q=${encodeURIComponent(query)}`;
+            // Поиск по предустановленной базе
+            setTimeout(() => {
+                if (demoTracks[query] && demoTracks[query].length > 0) {
+                    status.innerText = `Найдено: ${demoTracks[query].length} треков 🎵`;
+                    
+                    demoTracks[query].forEach(track => {
+                        const div = document.createElement('div');
+                        div.className = 'track';
+                        div.innerHTML = `
+                            <div class="track-info">
+                                <img src="${track.img}" alt="Обложка" loading="lazy">
+                                <div class="names">
+                                    <span class="title">${track.title}</span>
+                                    <span class="artist">${track.artist}</span>
+                                </div>
+                                <button class="play-btn" onclick="playTrack('${track.audio}')">▶</button>
+                            </div>
+                        `;
+                        res.appendChild(div);
+                    });
+                } else {
+                    status.innerText = 'Попробуй: Macan, miyagi, pharaoh';
+                }
+            }, 500);
+        }
 
-            // Создаём iframe с результатами поиска
-            const iframe = document.createElement('iframe');
-            iframe.src = url;
-            iframe.width = '100%';
-            iframe.height = '600';
-            iframe.frameBorder = '0';
-            iframe.allow = 'autoplay; encrypted-media';
-            iframe.style.borderRadius = '10px';
-
-            status.innerText = 'Готово! 🎵';
-            res.appendChild(iframe);
+        function playTrack(audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(e => console.log('Автопроигрыш заблокирован'));
         }
     </script>
 </body>

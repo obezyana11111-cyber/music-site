@@ -1,55 +1,64 @@
-<script>
-    function searchGlobal() {
-        const q = document.getElementById('q').value.trim();
-        if (!q) return;
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music App</title>
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; }
+        input { width: 70%; padding: 12px; border-radius: 20px; border: 1px solid #333; background: #111; color: #fff; outline: none; }
+        button { padding: 12px; border-radius: 20px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
+        .track { background: #111; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #222; text-align: left; }
+        img { width: 50px; height: 50px; border-radius: 5px; float: left; margin-right: 15px; }
+        audio { width: 100%; height: 30px; margin-top: 10px; filter: invert(1); }
+        .clear { clear: both; }
+    </style>
+</head>
+<body>
 
-        const status = document.getElementById('status');
-        status.innerText = 'Ищу в глобальной базе...через спутник 🛰️';
+    <h2>🎵 Music Player</h2>
+    
+    <input type="text" id="q" placeholder="Поиск (Macan, Queen...)">
+    <button onclick="search()">Найти</button>
 
-        // Удаляем старый скрипт если он был
-        const oldScript = document.getElementById('jsonp-search');
-        if (oldScript) oldScript.remove();
+    <div id="status" style="margin: 10px; color: #1db954;"></div>
+    <div id="res"></div>
 
-        // Создаем магическую ссылку для обхода блокировки
-        const script = document.createElement('script');
-        script.id = 'jsonp-search';
-        script.src = `https://itunes.apple.com{encodeURIComponent(q)}&entity=song&limit=15&country=ru&callback=handleResponse`;
-        
-        document.body.appendChild(script);
-    }
+    <script>
+        function search() {
+            const q = document.getElementById('q').value;
+            if(!q) return;
+            document.getElementById('status').innerText = 'Ищу...';
+            
+            // Удаляем старый скрипт (JSONP)
+            const old = document.getElementById('js-api');
+            if(old) old.remove();
 
-    // Эта функция сработает, когда Apple ответит
-    function handleResponse(data) {
-        const resBox = document.getElementById('global-results');
-        const status = document.getElementById('status');
-        const globalTitle = document.getElementById('global-title');
-
-        resBox.innerHTML = '';
-        status.innerText = '';
-
-        if (!data.results || data.results.length === 0) {
-            status.innerText = 'Ничего не нашли. Попробуй другое имя.';
-            return;
+            // Магия JSONP для обхода блокировок
+            const s = document.createElement('script');
+            s.id = 'js-api';
+            s.src = `https://itunes.apple.com{encodeURIComponent(q)}&entity=song&limit=20&country=ru&callback=show`;
+            document.body.appendChild(s);
         }
 
-        globalTitle.style.display = 'block';
-        data.results.forEach(t => {
-            if (t.previewUrl) {
-                resBox.innerHTML += `
-                    <div class="card">
-                        <img src="${t.artworkUrl100.replace('100x100', '300x300')}">
-                        <div class="info" style="flex:1;">
-                            <div style="font-weight:bold;">${t.trackName}</div>
-                            <span style="color:#aaa; font-size:12px;">${t.artistName}</span>
-                            <audio controls src="${t.previewUrl}" style="width:100%; margin-top:5px; filter:invert(1);"></audio>
-                        </div>
-                    </div>`;
-            }
-        });
-    }
-
-    // Поиск по Enter
-    document.getElementById('q').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') searchGlobal();
-    });
-</script>
+        function show(data) {
+            const res = document.getElementById('res');
+            document.getElementById('status').innerText = '';
+            res.innerHTML = '';
+            
+            data.results.forEach(t => {
+                if(t.previewUrl) {
+                    res.innerHTML += `
+                        <div class="track">
+                            <img src="${t.artworkUrl60}">
+                            <div style="font-weight:bold; font-size:14px;">${t.trackName}</div>
+                            <div style="font-size:12px; color:#999;">${t.artistName}</div>
+                            <div class="clear"></div>
+                            <audio controls src="${t.previewUrl}"></audio>
+                        </div>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

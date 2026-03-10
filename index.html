@@ -2,74 +2,80 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Music Station</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music App Final</title>
     <style>
-        body { background: #000; color: #fff; font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 15px; }
-        .header { position: sticky; top: 0; background: #000; padding: 10px 0; z-index: 10; border-bottom: 1px solid #222; }
-        input { width: 65%; padding: 12px; border-radius: 25px; border: 1px solid #333; background: #1a1a1a; color: #fff; outline: none; font-size: 16px; }
-        button { padding: 12px 20px; border-radius: 25px; border: none; background: #1db954; color: #fff; font-weight: bold; cursor: pointer; }
-        .track { background: #121212; padding: 15px; border-radius: 15px; margin-top: 15px; border: 1px solid #282828; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-        img { width: 60px; height: 60px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .info { flex: 1; min-width: 150px; }
-        .info b { display: block; font-size: 15px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .info span { color: #888; font-size: 13px; }
-        audio { width: 100%; height: 35px; margin-top: 10px; filter: invert(1); }
-        #status { margin-top: 15px; color: #1db954; font-size: 14px; }
+        body { background: #000; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 15px; }
+        input { width: 60%; padding: 12px; border-radius: 20px; border: 1px solid #333; background: #111; color: #fff; outline: none; }
+        button { padding: 12px 15px; border-radius: 20px; border: none; background: #1db954; color: white; cursor: pointer; }
+        .track { background: #111; padding: 15px; border-radius: 12px; margin-top: 15px; border: 1px solid #222; text-align: left; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        img { width: 50px; height: 50px; border-radius: 5px; }
+        audio { width: 100%; filter: invert(1); margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <input type="text" id="q" placeholder="Артист или песня..." onkeypress="if(event.key==='Enter')search()">
+    <div style="position: sticky; top: 0; background: #000; padding: 10px 0;">
+        <input type="text" id="q" placeholder="Напр: Macan...">
         <button onclick="search()">Найти</button>
-        <div id="status"></div>
+        <div id="status" style="margin-top:10px; color: #1db954;"></div>
     </div>
 
     <div id="res"></div>
 
     <script>
-        // Этот метод работает БЕЗ блокировок (JSONP)
         function search() {
             const q = document.getElementById('q').value.trim();
             if(!q) return;
             
-            document.getElementById('status').innerText = 'Ищу треки... 🚀';
-            
-            const oldScript = document.getElementById('api-script');
-            if(oldScript) oldScript.remove();
+            document.getElementById('status').innerText = 'Связь со спутником... 🛰️';
+            document.getElementById('res').innerHTML = '';
 
-            const script = document.createElement('script');
-            script.id = 'api-script';
-            // Используем официальный поиск Deezer с обратным вызовом
-            script.src = `https://api.deezer.com{encodeURIComponent(q)}&output=jsonp&callback=render`;
-            document.body.appendChild(script);
+            // Удаляем старый скрипт
+            const old = document.getElementById('api');
+            if(old) old.remove();
+
+            // Создаем новый запрос (JSONP к Apple)
+            const s = document.createElement('script');
+            s.id = 'api';
+            // Добавляем параметр country=ru, чтобы находить Macan
+            s.src = `https://itunes.apple.com{encodeURIComponent(q)}&entity=song&limit=20&country=ru&callback=render`;
+            
+            // Если через 5 секунд ничего не произошло - выводим ошибку
+            setTimeout(() => {
+                if (document.getElementById('status').innerText === 'Связь со спутником... 🛰️') {
+                    document.getElementById('status').innerText = 'Ошибка: Сервер не отвечает. Попробуй VPN.';
+                }
+            }, 5000);
+
+            document.body.appendChild(s);
         }
 
-        function render(response) {
+        function render(data) {
             const res = document.getElementById('res');
             const status = document.getElementById('status');
             status.innerText = '';
-            res.innerHTML = '';
             
-            if (!response.data || response.data.length === 0) {
+            if (!data.results || data.results.length === 0) {
                 status.innerText = 'Ничего не найдено. Попробуй другое имя.';
                 return;
             }
 
-            response.data.forEach(t => {
-                if(t.preview) {
-                    res.innerHTML += `
+            let html = '';
+            data.results.forEach(t => {
+                if (t.previewUrl) {
+                    html += `
                         <div class="track">
-                            <img src="${t.album.cover_medium}">
-                            <div class="info">
-                                <b>${t.title}</b>
-                                <span>${t.artist.name}</span>
+                            <img src="${t.artworkUrl100}">
+                            <div style="flex:1;">
+                                <b style="font-size:14px;">${t.trackName}</b><br>
+                                <span style="color:#888; font-size:12px;">${t.artistName}</span>
                             </div>
-                            <audio controls preload="none" src="${t.preview}"></audio>
+                            <audio controls src="${t.previewUrl}"></audio>
                         </div>`;
                 }
             });
+            res.innerHTML = html;
         }
     </script>
 </body>

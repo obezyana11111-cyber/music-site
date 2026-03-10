@@ -16,7 +16,7 @@
         .info { flex: 1; }
         .title { display: block; font-weight: bold; font-size: 14px; }
         .artist { font-size: 12px; color: #aaa; }
-        audio { width: 100%; margin-top: 8px; }
+        audio { width: 120px; height: 30px; }
     </style>
 </head>
 <body>
@@ -41,35 +41,46 @@
             res.innerHTML = '';
 
             try {
-                // Используем Last.fm API (работает без CORS проблем)
+                // Last.fm API с полной проверкой структуры ответа
                 const url = `https://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(query)}&api_key=4a8a6c71903e4e9a9b0f9c8a2d3e4f5a&format=json&limit=10`;
                 
                 const response = await fetch(url);
                 const data = await response.json();
 
-                status.innerText = `API найдено: ${data.results.trackmatches.track?.length || 0}`;
+                // Полная отладка в консоль
+                console.log('API Response:', data);
 
-                if (!data.results.trackmatches.track || data.results.trackmatches.track.length === 0) {
-                    status.innerText = 'Ничего не найдено ⛔';
+                // Безопасная проверка структуры
+                if (!data || !data.results) {
+                    throw new Error('API вернул пустой результат');
+                }
+
+                const tracks = data.results.trackmatches?.track || [];
+                status.innerText = `Найдено треков: ${tracks.length}`;
+
+                if (tracks.length === 0) {
+                    status.innerText = 'Треки не найдены. Попробуй: radiohead, metallica';
                     return;
                 }
 
-                data.results.trackmatches.track.slice(0, 10).forEach(track => {
+                // Отображаем результаты
+                tracks.slice(0, 10).forEach(track => {
                     const div = document.createElement('div');
                     div.className = 'track';
                     div.innerHTML = `
                         <img src="https://via.placeholder.com/50/1db954/000?text=🎵" alt="Обложка">
                         <div class="info">
-                            <span class="title">${track.name}</span>
-                            <span class="artist">${track.artist}</span>
+                            <span class="title">${track.name || 'Неизвестный трек'}</span>
+                            <span class="artist">${track.artist || 'Неизвестный исполнитель'}</span>
                         </div>
-                        <audio controls src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" style="width: 120px;"></audio>
+                        <audio controls src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"></audio>
                     `;
                     res.appendChild(div);
                 });
 
             } catch (error) {
-                status.innerHTML = '<span style="color:#ff6b6b">API ошибка: ' + error.message + '</span>';
+                console.error('API Error:', error);
+                status.innerHTML = '<span style="color:#ff6b6b">Ошибка API. F12 → Console для деталей.</span>';
             }
         }
     </script>

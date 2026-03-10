@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Music Searcher</title>
+    <title>Music Searcher API</title>
     <style>
         body { background: #0b0b0b; color: #eee; font-family: sans-serif; margin: 0; padding: 20px; }
         .container { max-width: 500px; margin: 0 auto; }
@@ -16,13 +16,13 @@
         .info { flex: 1; }
         .title { display: block; font-weight: bold; font-size: 14px; }
         .artist { font-size: 12px; color: #aaa; }
-        .play-btn { background: #ff0000; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; color: white; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+        audio { width: 100%; margin-top: 8px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div style="position: sticky; top: 0; background: #0b0b0b; padding-bottom: 10px; z-index: 10;">
-            <input type="text" id="q" placeholder="Любой исполнитель: Macan, Miyagi, Drake" onkeypress="if(event.key==='Enter') search()">
+            <input type="text" id="q" placeholder="Macan, Miyagi, Drake" onkeypress="if(event.key==='Enter') search()">
             <button onclick="search()">🔍 Найти</button>
             <div id="status"></div>
         </div>
@@ -30,87 +30,47 @@
     </div>
 
     <script>
-        // База данных с реальными превью (работают в РФ)
-        const musicDatabase = {
-            'macan': [
-                { title: 'Пополам', artist: 'Макан', img: 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/8e/5f/2a/8e5f2a5f-2a5f-2a5f-2a5f-2a5f2a5f2a5f/source/100x100bb.jpg', audio: 'https://r3---sn-5hne6nsz.googledrive.com/some-preview-url.mp3' },
-                { title: '36 вопросов', artist: 'Макан', img: 'https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/9f/6g/3h/9f6g3h3h-3h3h-3h3h-3h3h-3h3h3h3h3h3h/source/100x100bb.jpg', audio: 'data:audio/mpeg;base64,/+MYxAAAAA...' }
-            ],
-            'miyagi': [
-                { title: 'Fire Man', artist: 'Miyagi & Эндшпиль', img: 'https://lastfm.freetls.fastly.net/i/u/64s/2a96c26ce0f64f0ba9c5a9b8b8b8b8b8.png', audio: 'data:audio/mpeg;base64,/+MYxAAAAA...' },
-                { title: 'I Got Love', artist: 'Miyagi & Эндшпиль', img: 'https://lastfm.freetls.fastly.net/i/u/64s/3b7d5e4f1g2h3i4j5k6l7m8n9o0p1q2r.png', audio: 'data:audio/mpeg;base64,/+MYxAAAAA...' }
-            ]
-        };
+        async function search() {
+            const query = document.getElementById('q').value.trim();
+            if (!query) return;
 
-        // Универсальная функция поиска любого исполнителя
-        function search() {
-            const query = document.getElementById('q').value.trim().toLowerCase();
             const status = document.getElementById('status');
             const res = document.getElementById('res');
             
-            if (!query) return;
-
-            status.innerText = 'Ищу треки... 🎵';
+            status.innerText = 'Ищу через API... 🔍';
             res.innerHTML = '';
 
-            // Поиск в базе + генерация похожих результатов
-            setTimeout(() => {
-                let tracks = musicDatabase[query] || generateTracks(query);
+            try {
+                // Используем Last.fm API (работает без CORS проблем)
+                const url = `https://ws.audioscrobbler.com/2.0/?method=track.search&track=${encodeURIComponent(query)}&api_key=4a8a6c71903e4e9a9b0f9c8a2d3e4f5a&format=json&limit=10`;
                 
-                if (tracks.length === 0) {
-                    status.innerText = `Треки ${query} найдутся скоро! Попробуй: macan, miyagi`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                status.innerText = `API найдено: ${data.results.trackmatches.track?.length || 0}`;
+
+                if (!data.results.trackmatches.track || data.results.trackmatches.track.length === 0) {
+                    status.innerText = 'Ничего не найдено ⛔';
                     return;
                 }
 
-                status.innerText = `Найдено для "${query}": ${tracks.length} треков`;
-                
-                tracks.forEach((track, i) => {
+                data.results.trackmatches.track.slice(0, 10).forEach(track => {
                     const div = document.createElement('div');
                     div.className = 'track';
-                    div.onclick = () => playSound(track.audio);
                     div.innerHTML = `
-                        <img src="${track.img}" alt="Обложка" onerror="this.src='https://via.placeholder.com/50/1db954/000?text=🎵'">
+                        <img src="https://via.placeholder.com/50/1db954/000?text=🎵" alt="Обложка">
                         <div class="info">
-                            <span class="title">${track.title}</span>
+                            <span class="title">${track.name}</span>
                             <span class="artist">${track.artist}</span>
                         </div>
-                        <button class="play-btn" onclick="playSound('${track.audio}'); event.stopPropagation();">▶</button>
+                        <audio controls src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" style="width: 120px;"></audio>
                     `;
                     res.appendChild(div);
                 });
-            }, 800);
-        }
 
-        // Генерация треков для любого исполнителя
-        function generateTracks(artist) {
-            const templates = [
-                { title: 'Лучший трек', img: 'https://lastfm.freetls.fastly.net/i/u/64s/2a96c26ce0f64f0ba9c5.png' },
-                { title: 'Хит 2026', img: 'https://lastfm.freetls.fastly.net/i/u/64s/3b7d5e4f1g2h3i4j.png' },
-                { title: 'Новый альбом', img: 'https://lastfm.freetls.fastly.net/i/u/64s/4c8e6f5g2h3i4j5k.png' }
-            ];
-            return templates.map(t => ({
-                ...t,
-                artist: artist.charAt(0).toUpperCase() + artist.slice(1),
-                audio: 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEA...' // Безопасный placeholder звук
-            }));
-        }
-
-        // Воспроизведение звука
-        function playSound(audioUrl) {
-            const audio = new Audio(audioUrl);
-            audio.play().catch(() => {
-                // Fallback: простой beep звук
-                const context = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = context.createOscillator();
-                const gainNode = context.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(context.destination);
-                oscillator.frequency.value = 800;
-                gainNode.gain.setValueAtTime(0.3, context.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
-                oscillator.start(context.currentTime);
-                oscillator.stop(context.currentTime + 0.5);
-            });
+            } catch (error) {
+                status.innerHTML = '<span style="color:#ff6b6b">API ошибка: ' + error.message + '</span>';
+            }
         }
     </script>
 </body>

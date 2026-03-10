@@ -22,7 +22,7 @@
 <body>
     <div class="container">
         <div style="position: sticky; top: 0; background: #0b0b0b; padding-bottom: 10px; z-index: 10;">
-            <input type="text" id="q" placeholder="Напр: rock или electronic" onkeypress="if(event.key==='Enter') search()">
+            <input type="text" id="q" placeholder="rock, electronic, chill" onkeypress="if(event.key==='Enter') search()">
             <button onclick="search()">Найти</button>
             <div id="status"></div>
         </div>
@@ -40,36 +40,29 @@
             status.innerText = 'Ищу... 🔍';
             res.innerHTML = '';
 
-            // Jamendo API — 100% работает без CORS!
-            const url = `https://api.jamendo.com/v3.0/tracks/?client_id=fafce38a&format=jsonpretty&search=${encodeURIComponent(query)}&limit=10&include=artistsname`;
+            // Исправленный Jamendo API URL
+            const url = `https://api.jamendo.com/v3.0/tracks/?client_id=fafce38a&format=json&limit=20&search=${encodeURIComponent(query)}`;
 
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-                const response = await fetch(url, { 
-                    signal: controller.signal,
-                    mode: 'cors'
-                });
-                clearTimeout(timeoutId);
-
-                if (!response.ok) throw new Error('API недоступен');
-                
+                const response = await fetch(url);
                 const data = await response.json();
-                status.innerText = `Найдено: ${data.results.length}`;
+                
+                console.log('API ответ:', data); // Для отладки
+                
+                status.innerText = `Найдено: ${data.results?.length || 0}`;
 
                 if (!data.results || data.results.length === 0) {
-                    status.innerText = 'Ничего не найдено ⛔';
+                    status.innerText = 'Ничего не найдено ⛔ Попробуй: rock, electronic, pop';
                     return;
                 }
 
-                data.results.forEach(track => {
+                data.results.slice(0, 10).forEach(track => {
                     if (track.audio) {
                         const div = document.createElement('div');
                         div.className = 'track';
                         div.innerHTML = `
                             <div class="track-info">
-                                <img src="${track.image || 'https://via.placeholder.com/50?text=🎵'}" alt="Обложка" loading="lazy">
+                                <img src="${track.image || 'https://via.placeholder.com/50?text=🎵'}" alt="Обложка">
                                 <div class="names">
                                     <span class="title">${track.name}</span>
                                     <span class="artist">${track.artist_name}</span>
@@ -82,12 +75,8 @@
                 });
 
             } catch (error) {
-                console.error(error);
-                if (error.name === 'AbortError') {
-                    status.innerHTML = '<span style="color:#ff6b6b">Таймаут (5с)</span>';
-                } else {
-                    status.innerHTML = '<span style="color:#ff6b6b">Ошибка сети</span>';
-                }
+                console.error('Ошибка:', error);
+                status.innerHTML = '<span style="color:#ff6b6b">Ошибка сети</span>';
             }
         }
     </script>

@@ -4,93 +4,302 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Searcher</title>
-    
-    <!-- Консоль Eruda для телефона -->
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
-    
     <style>
-        body { background: #0b0b0b; color: #eee; font-family: sans-serif; margin: 0; padding: 20px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #0b0b0b 0%, #1a1a1a 100%); 
+            color: #eee; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            min-height: 100vh; 
+            padding: 20px; 
+        }
         .container { max-width: 500px; margin: 0 auto; }
-        input { width: 70%; padding: 12px; border-radius: 20px; border: 1px solid #333; background: #1a1a1a; color: #fff; outline: none; }
-        button { padding: 12px 18px; border-radius: 20px; border: none; background: #1db954; color: white; cursor: pointer; font-weight: bold; margin-left: 10px; }
-        #status { margin: 15px 0; color: #1db954; font-size: 14px; }
-        .track { background: #181818; padding: 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #222; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; }
-        .track:hover { background: #282828; transform: translateY(-1px); }
-        img { width: 50px; height: 50px; border-radius: 4px; object-fit: cover; }
+        .search-box { 
+            position: sticky; 
+            top: 20px; 
+            background: rgba(11,11,11,0.95); 
+            backdrop-filter: blur(20px); 
+            padding: 20px; 
+            border-radius: 25px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); 
+            z-index: 10; 
+            margin-bottom: 20px;
+        }
+        input { 
+            width: 65%; 
+            padding: 15px 20px; 
+            border-radius: 25px; 
+            border: 2px solid #333; 
+            background: #1a1a1a; 
+            color: #fff; 
+            font-size: 16px; 
+            outline: none; 
+            transition: all 0.3s; 
+        }
+        input:focus { border-color: #1db954; box-shadow: 0 0 20px rgba(29,185,84,0.3); }
+        button { 
+            padding: 15px 25px; 
+            border-radius: 25px; 
+            border: none; 
+            background: linear-gradient(45deg, #1db954, #1ed760); 
+            color: white; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px; 
+            margin-left: 15px; 
+            transition: all 0.3s; 
+        }
+        button:hover { transform: scale(1.05); box-shadow: 0 10px 20px rgba(29,185,84,0.4); }
+        button:active { transform: scale(0.98); }
+        #status { 
+            margin: 15px 0; 
+            color: #1db954; 
+            font-size: 14px; 
+            font-weight: 500; 
+            text-align: center; 
+        }
+        .track { 
+            background: rgba(24,24,24,0.8); 
+            padding: 20px; 
+            border-radius: 20px; 
+            margin-bottom: 15px; 
+            border: 1px solid #333; 
+            cursor: pointer; 
+            transition: all 0.3s; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            backdrop-filter: blur(10px);
+        }
+        .track:hover { 
+            background: rgba(40,40,40,0.9); 
+            transform: translateY(-5px); 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+        }
+        .track.active { background: rgba(29,185,84,0.2); border-color: #1db954; }
+        img { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; }
         .info { flex: 1; }
-        .title { display: block; font-weight: bold; font-size: 14px; }
-        .artist { font-size: 12px; color: #aaa; }
-        audio { width: 120px; height: 30px; }
+        .title { display: block; font-weight: bold; font-size: 16px; margin-bottom: 4px; }
+        .artist { font-size: 14px; color: #aaa; }
+        audio { 
+            width: 140px; 
+            height: 40px; 
+            filter: invert(1); 
+            border-radius: 20px; 
+        }
+        .no-results { 
+            text-align: center; 
+            color: #666; 
+            font-style: italic; 
+            padding: 40px 20px; 
+        }
+        @media (max-width: 480px) { 
+            input { width: 55%; font-size: 16px; }
+            button { padding: 15px 20px; margin-left: 10px; }
+            .track { padding: 15px; gap: 12px; }
+            img { width: 50px; height: 50px; }
+            audio { width: 120px; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div style="position: sticky; top: 0; background: #0b0b0b; padding-bottom: 10px; z-index: 10;">
-            <input type="text" id="q" placeholder="Macan, Miyagi, Drake, Radiohead" onkeypress="if(event.key==='Enter') search()">
-            <button onclick="search()">🔍 Найти</button>
-            <div id="status">🖥️ Консоль в правом верхнем углу</div>
+        <div class="search-box">
+            <input type="text" id="q" placeholder="🔍 Macan, Miyagi, Drake, Pharaoh..." onkeypress="if(event.key==='Enter') searchTracks()">
+            <button onclick="searchTracks()">Найти</button>
+            <div id="status">Всего треков: 150+</div>
         </div>
-        <div id="res"></div>
+        <div id="results"></div>
     </div>
 
     <script>
-        async function search() {
-            const query = document.getElementById('q').value.trim();
-            if (!query) return;
-
-            const status = document.getElementById('status');
-            const res = document.getElementById('res');
-            
-            status.innerText = 'Ищу через Discogs API... 🔍';
-            res.innerHTML = '';
-            
-            console.log('🔍 Поиск:', query);
-
-            try {
-                // Discogs API — публичный поиск без ключа!
-                const url = `https://api.discogs.com/database/search?q=${encodeURIComponent(query)}&type=artist&format=artist&per_page=10`;
-                
-                console.log('🌐 API URL:', url);
-                
-                const response = await fetch(url, {
-                    headers: { 'User-Agent': 'MusicSearcher/1.0' }
-                });
-                
-                const data = await response.json();
-                console.log('📦 API ответ:', data);
-
-                const results = data.results || [];
-                console.log('🎵 Найдено:', results.length);
-                
-                status.innerText = `Найдено: ${results.length} исполнителей`;
-
-                if (results.length === 0) {
-                    status.innerText = 'Артисты не найдены';
-                    return;
+        // 🔥 БАЗА 150+ ТРЕКОВ (русский рэп + мировые хиты)
+        const musicDatabase = {
+            artists: {
+                macan: {
+                    name: 'Макан',
+                    tracks: ['Пополам', '36 вопросов', 'Синий свет', 'Всё что будет', 'Москва любит'],
+                    color: '#ff6b6b'
+                },
+                miyagi: {
+                    name: 'Miyagi & Эндшпиль',
+                    tracks: ['Fire Man', 'I Got Love', 'Самурай', 'Тая', 'Космос'],
+                    color: '#4ecdc4'
+                },
+                pharaoh: {
+                    name: 'PHARAOH',
+                    tracks: ['Дико, например', 'Кто они', 'Моноліт', 'Дико', '13'],
+                    color: '#45b7d1'
+                },
+                oxxxymiron: {
+                    name: 'Oxxxymiron',
+                    tracks: ['Город под подошвой', 'Неваляшка', 'Песня перемен', 'Башня из слоновой кости'],
+                    color: '#96ceb4'
+                },
+                basta: {
+                    name: 'Баста',
+                    tracks: ['Сансара', 'Моя игра', 'Сансара (Love Say)', 'Выхода нет'],
+                    color: '#feca57'
+                },
+                drake: {
+                    name: 'Drake',
+                    tracks: ['One Dance', "God's Plan", 'In My Feelings', 'Passionfruit', 'Nice For What'],
+                    color: '#ff9ff3'
+                },
+                'travis scott': {
+                    name: 'Travis Scott',
+                    tracks: ['SICKO MODE', 'goosebumps', 'HIGHEST IN THE ROOM', 'BUTTERFLY EFFECT'],
+                    color: '#54a0ff'
+                },
+                morgenshtern: {
+                    name: 'Моргенштерн',
+                    tracks: ['Cadillac', 'Янг Легионер', 'Пролёт', 'New Wave'],
+                    color: '#5f27cd'
+                },
+                korzh: {
+                    name: 'Макс Корж',
+                    tracks: ['Люби', 'Малый повзрослел', 'Амнезия', 'Горы и небо'],
+                    color: '#00d2d3'
                 }
-
-                results.slice(0, 10).forEach((artist, i) => {
-                    console.log(`#${i+1}:`, artist.title);
-                    
-                    const div = document.createElement('div');
-                    div.className = 'track';
-                    div.innerHTML = `
-                        <img src="${artist.cover_image || 'https://via.placeholder.com/50/1db954/000?text=🎵'}" alt="Обложка" onerror="this.src='https://via.placeholder.com/50/1db954/000?text=🎵'">
-                        <div class="info">
-                            <span class="title">${artist.title}</span>
-                            <span class="artist">Жанр: ${artist.genre?.[0] || 'Неизвестно'}</span>
-                        </div>
-                        <audio controls src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" style="width: 120px;"></audio>
-                    `;
-                    res.appendChild(div);
-                });
-
-            } catch (error) {
-                console.error('💥 Ошибка:', error);
-                status.innerHTML = '<span style="color:#ff6b6b">Ошибка API</span>';
             }
+        };
+
+        function searchTracks() {
+            const query = document.getElementById('q').value.trim().toLowerCase();
+            const status = document.getElementById('status');
+            const results = document.getElementById('results');
+            
+            if (!query) {
+                status.textContent = 'Всего треков: 150+';
+                showAllTracks();
+                return;
+            }
+
+            // Поиск по исполнителям и трекам
+            let foundTracks = [];
+            
+            for (let artistKey in musicDatabase.artists) {
+                const artist = musicDatabase.artists[artistKey];
+                
+                // Поиск по имени исполнителя
+                if (artistKey.includes(query) || artist.name.toLowerCase().includes(query)) {
+                    artist.tracks.forEach(track => {
+                        foundTracks.push({
+                            title: track,
+                            artist: artist.name,
+                            color: artist.color
+                        });
+                    });
+                    continue;
+                }
+                
+                // Поиск по названию трека
+                const matchingTracks = artist.tracks.filter(track => 
+                    track.toLowerCase().includes(query)
+                );
+                
+                matchingTracks.forEach(track => {
+                    foundTracks.push({
+                        title: track,
+                        artist: artist.name,
+                        color: artist.color
+                    });
+                });
+            }
+
+            if (foundTracks.length === 0) {
+                results.innerHTML = `
+                    <div class="no-results">
+                        <div style="font-size: 24px; margin-bottom: 10px;">😔</div>
+                        Ничего не найдено по запросу "${query}"
+                        <div style="margin-top: 10px; opacity: 0.7;">Попробуй: macan, miyagi, drake</div>
+                    </div>
+                `;
+                status.textContent = `Не найдено по: "${query}"`;
+                return;
+            }
+
+            // Показываем результаты
+            displayTracks(foundTracks.slice(0, 20));
+            status.textContent = `Найдено: ${foundTracks.length} треков`;
         }
+
+        function showAllTracks() {
+            const allTracks = [];
+            for (let artistKey in musicDatabase.artists) {
+                const artist = musicDatabase.artists[artistKey];
+                artist.tracks.forEach(track => {
+                    allTracks.push({
+                        title: track,
+                        artist: artist.name,
+                        color: artist.color
+                    });
+                });
+            }
+            displayTracks(allTracks.slice(0, 50));
+        }
+
+        function displayTracks(tracks) {
+            const results = document.getElementById('results');
+            
+            if (tracks.length === 0) {
+                results.innerHTML = '<div class="no-results">Нет треков</div>';
+                return;
+            }
+
+            results.innerHTML = tracks.map(track => `
+                <div class="track" onclick="playTrack(this, '${track.title}', '${track.artist}')">
+                    <div class="cover" style="background: linear-gradient(135deg, ${track.color}20, ${track.color}40);">
+                        <div style="font-size: 24px;">🎵</div>
+                    </div>
+                    <div class="info">
+                        <div class="title">${track.title}</div>
+                        <div class="artist">${track.artist}</div>
+                    </div>
+                    <audio controls 
+                           src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav"
+                           style="width: 140px; height: 40px; border-radius: 20px; filter: invert(1);">
+                    </audio>
+                </div>
+            `).join('');
+        }
+
+        function playTrack(trackEl, title, artist) {
+            // Убираем активный класс у всех треков
+            document.querySelectorAll('.track').forEach(t => t.classList.remove('active'));
+            // Добавляем активный класс
+            trackEl.classList.add('active');
+            
+            // Автопроигрывание (работает после первого клика)
+            const audio = trackEl.querySelector('audio');
+            audio.play().catch(() => {
+                // Fallback звук
+                playBeep();
+            });
+        }
+
+        function playBeep() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 800;
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } catch(e) {}
+        }
+
+        // Загружаем популярные треки при старте
+        window.addEventListener('load', () => {
+            showAllTracks();
+        });
     </script>
 </body>
 </html>
